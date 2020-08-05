@@ -31,7 +31,7 @@ class _EnterPricePageState extends State<EnterPricePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text(
-              "Enter item price ",
+              "Insira o preço do item ",
               style: Theme.of(context).textTheme.headline4,
             ),
             new Container(
@@ -43,7 +43,7 @@ class _EnterPricePageState extends State<EnterPricePage> {
                           controller: priceController,
                           validator: (value) {
                             if (value.isEmpty) {
-                              return "Please enter a number";
+                              return "Por favor, insira um número";
                             }
                           },
                           keyboardType: TextInputType.number,
@@ -52,7 +52,7 @@ class _EnterPricePageState extends State<EnterPricePage> {
             new RaisedButton(
                 onPressed: validateAndGoToDataPage,
                 child: Text(
-                  "View",
+                  "Simular parcelas",
                   style: Theme.of(context).textTheme.headline5,
                 ))
           ],

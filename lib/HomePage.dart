@@ -6,7 +6,7 @@ import 'package:down/SettingsPage.dart';
 
 
 class HomePage extends StatefulWidget {
-  final String title = "NuBank Installment Visualizer";
+  final String title = "Nu+ Mobile";
   @override
   _HomePageState createState() => _HomePageState();
 }

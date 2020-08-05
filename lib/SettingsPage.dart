@@ -6,13 +6,14 @@ class SettingsPage extends StatefulWidget {
   _SettingsPageState createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends State<SettingsPage> with AutomaticKeepAliveClientMixin{
   DatabaseReference dbuser;
 
   double _income = 0;
   double _savingsGoal = 0;
   double _fixedExpenses = 0;
   double _savingsGoalSlider = 0;
+  bool wantKeepAlive = true;
 
   TextEditingController priceController = new TextEditingController();
 
@@ -36,7 +37,9 @@ class _SettingsPageState extends State<SettingsPage> {
     if (ds.key == "fixedexpenses") {
       _fixedExpenses = double.parse(ds.value.toString());
     }
-    setState(() {});
+    if (this.mounted) {
+      setState(() {});
+    }
   }
 
   String _displayDoubleAsMoney(double value) {
@@ -51,12 +54,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget displaySlider() {
     return Column(children: <Widget>[
-      Text("New Savings Goal: " + _savingsGoalSlider.toString(),
-          style: Theme.of(context).textTheme.headline5),
+      Text("Novo objetivo de economia: " + _displayDoubleAsMoney(_savingsGoalSlider),
+          style: Theme.of(context).textTheme.headline5,
+      textAlign: TextAlign.center,),
       Slider(
         min: 0.0,
         max: (((_income - _fixedExpenses) ~/ 50) * 50).toDouble(),
-        divisions: ((_income - _fixedExpenses) ~/ 50).toInt(),
+        divisions: ((_income - _fixedExpenses) ~/ 50).toInt() == 0 ? 1 : ((_income - _fixedExpenses) ~/ 50).toInt(),
         value: _savingsGoalSlider.toInt().toDouble(),
         onChanged: (newValue) {
           setState(() {
@@ -75,7 +79,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(children: <Widget>[
           displaySlider(),
           new RaisedButton(
-              onPressed: _updateFirebase, child: Text("Update Savings Goal")),
+              onPressed: _updateFirebase, child: Text("Atualizar objetivo de economia")),
         ]));
   }
 
@@ -86,7 +90,7 @@ class _SettingsPageState extends State<SettingsPage> {
       Padding(
           padding: EdgeInsets.fromLTRB(20.0, 100.0, 20.0, 0.0),
           child: Text(
-              "Present Savings Goal: " + _displayDoubleAsMoney(_savingsGoal),
+              "Objetivo de economia mensal: " + _displayDoubleAsMoney(_savingsGoal),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headline4)),
       displayForm()

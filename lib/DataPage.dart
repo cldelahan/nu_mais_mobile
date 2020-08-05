@@ -4,6 +4,7 @@ import 'package:down/Transaction.dart';
 import 'package:normal/normal.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:down/ExpensesPerMonth.dart';
+import 'package:down/InstallmentCalculator.dart';
 
 class DataPage extends StatefulWidget {
   double _price;
@@ -70,7 +71,7 @@ class _DataPageState extends State<DataPage> {
     return 'R\$' + value.toStringAsFixed(2);
   }
 
-  double _getBalanceOfAccount() {
+  double _populateBalanceOfAccount() {
     double balance = 0.0;
     for (Transaction t in transactions) {
       if (t.date.isBefore(DateTime.now())) {
@@ -81,7 +82,7 @@ class _DataPageState extends State<DataPage> {
     return balance;
   }
 
-  int _getOptimalNumberOfSplits() {
+  /*int _getOptimalNumberOfSplits() {
     double cash = _getBalanceOfAccount();
     double variance = 0.15 * cash;
     double minProb = 1;
@@ -98,9 +99,13 @@ class _DataPageState extends State<DataPage> {
     }
     this._optInstallments = optInstallments;
     return optInstallments;
-  }
+  }*/
 
-  List<double> _getMonthlyExpenses() {
+  void _populateVariables() {
+    // ---------------------------------
+    // first get the monthly installments
+    // ---------------------------------
+
     double amt_fixed = 0;
     List<double> amt_installments = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -136,49 +141,76 @@ class _DataPageState extends State<DataPage> {
       }
     }
 
-
     // finally consider this transaction
-    for (int i = 0; i < _nInstallments.round(); i++) {
+    /*for (int i = 0; i < _nInstallments.round(); i++) {
       amt_installments[i] += widget._price / _nInstallments.round();
-    }
+    }*/
 
     print(amt_fixed);
     this._moInstallments = amt_installments;
     this._fixedExpenses = amt_fixed;
 
-    print(amt_installments);
-    _populateSeries();
+    // ---------------------------------
+    // set the balance of account
+    // ---------------------------------
 
-    return amt_installments;
+    _populateBalanceOfAccount();
+
+    // ---------------------------------
+    // next get optimal number installments
+    // ---------------------------------
+
+    this._optInstallments = InstallmentCalculator.getOptimalNumberOfSplits(
+        this._moInstallments,
+        widget._price,
+        _income,
+        _accBalance,
+        _savingsGoal);
+
+    // ---------------------------------
+    // finally generate the series for the graph
+    // ---------------------------------
+
+    _populateSeries();
   }
 
   void _populateSeries() {
     List<String> months = [
-      "Au",
-      "Se",
-      "Oc",
-      "Nv",
-      "De",
-      "Ja",
-      "Fe",
-      "Mr",
-      "Ap",
-      "My",
-      "Ju",
-      "Jy"
+      "Ago",
+      "Set",
+      "Out",
+      "Nov",
+      "Dez",
+      "Jan",
+      "Fev",
+      "Mar",
+      "Abr",
+      "Mai",
+      "Jun",
+      "Jul"
     ];
 
     _seriesData = [];
 
+    List<double> line = InstallmentCalculator.gen30Line(_income);
     for (int i = 0; i < _moInstallments.length; i++) {
-      double nValue;
-      if (_includeExpenses) {
-        nValue = _moInstallments[i] + _fixedExpenses;
-      } else {
-        nValue = _moInstallments[i];
+      double nValue = 0;
+      if (i < _nInstallments.round()) {
+        nValue += widget._price / _nInstallments.round();
       }
-      this._seriesData.add(new ExpensesPerMonth(months[i], nValue,
-          nValue > _income - _savingsGoal ? Colors.red : Colors.green));
+      if (_includeExpenses) {
+        nValue += _moInstallments[i] + _fixedExpenses;
+      } else {
+        nValue += _moInstallments[i];
+      }
+
+      if (_includeExpenses) {
+        this._seriesData.add(new ExpensesPerMonth(months[i], nValue,
+            nValue > _income - _savingsGoal ? Colors.red : Colors.green));
+      } else {
+        this._seriesData.add(new ExpensesPerMonth(
+            months[i], nValue, nValue > line[i] ? Colors.red : Colors.green));
+      }
     }
 
     _series = [
@@ -195,7 +227,14 @@ class _DataPageState extends State<DataPage> {
     return new Padding(
         padding: EdgeInsets.fromLTRB(0.0, 30.0, 0.0, 0.0),
         child: Column(children: <Widget>[
-          Text("Installments: " + _nInstallments.toString(),
+          Text(
+              _nInstallments == 1
+                  ? _nInstallments.toInt().toString() +
+                      " parcela de " +
+                      _displayDoubleAsMoney(widget._price / _nInstallments)
+                  : _nInstallments.toInt().toString() +
+                      " parcelas de " +
+                      _displayDoubleAsMoney(widget._price / _nInstallments),
               style: Theme.of(context).textTheme.headline),
           Slider(
               activeColor: Theme.of(context).primaryColor,
@@ -213,12 +252,12 @@ class _DataPageState extends State<DataPage> {
   }
 
   Widget createChart() {
-    _getMonthlyExpenses();
     if (_series.length == 0) {
       return Container(color: Colors.transparent);
     }
 
     var chart = new charts.BarChart(_series, animate: true);
+
     return new Padding(
       padding: new EdgeInsets.all(32.0),
       child: new SizedBox(
@@ -231,15 +270,15 @@ class _DataPageState extends State<DataPage> {
   Widget createTextHeader() {
     return Column(children: <Widget>[
       Text(
-        "This item represents " +
-            (100 * widget._price / _income).toStringAsFixed(0) +
-            "% of your monthly income",
+        "Esse item representa " +
+            (100 * widget._price / _income).toStringAsFixed(1) +
+            "% da sua renda mensal",
         style: Theme.of(context).textTheme.headline5,
         textAlign: TextAlign.center,
       ),
       Padding(
         padding: EdgeInsets.fromLTRB(0.0, 20.0, 0.0, 0.0),
-        child: Text("Price: " + _displayDoubleAsMoney(widget._price),
+        child: Text("Valor da compra: " + _displayDoubleAsMoney(widget._price),
             style: Theme.of(context).textTheme.headline5),
       )
     ]);
@@ -248,15 +287,21 @@ class _DataPageState extends State<DataPage> {
   Widget createOptimalSplitDisplay() {
     return Padding(
       padding: EdgeInsets.fromLTRB(10.0, 20.0, 10.0, 0.0),
-      child: Text("Optimal Installments " + _getOptimalNumberOfSplits().toString(),
-          style: Theme.of(context).textTheme.headline5),
+      child: _optInstallments == -1
+          ? Text("Talvez agora não seja o melhor momento para essa compra",
+              style: Theme.of(context).textTheme.headline5)
+          : Text(
+              "Número recomendado de parcelas: " + _optInstallments.toString(),
+              style: Theme.of(context).textTheme.headline5,
+              textAlign: TextAlign.center,
+            ),
     );
   }
 
   Widget createToggle() {
     return Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
       Text(
-        "Include predicted expenses? ",
+        "Incluir estimativa de despesas? ",
         style: Theme.of(context).textTheme.bodyText2,
         textAlign: TextAlign.center,
       ),
@@ -274,20 +319,22 @@ class _DataPageState extends State<DataPage> {
 
   @override
   Widget build(BuildContext context) {
+    _populateVariables();
     return SafeArea(
         child: Scaffold(
-            appBar: AppBar(title: Text("Visualize Installments")),
+            appBar: AppBar(title: Text("Visualizar parcelas")),
             body: Padding(
-              padding: EdgeInsets.fromLTRB(5.0, 20.0, 5.0, 0.0),
-              child: Column(
-                children: <Widget>[
-                  createTextHeader(),
-                  createToggle(),
-                  createSlider(),
-                  createChart(),
-                  createOptimalSplitDisplay()
-                ],
-              ),
-            )));
+                padding: EdgeInsets.fromLTRB(5.0, 20.0, 5.0, 0.0),
+                  child: Container(
+                  child: Column(
+                    children: <Widget>[
+                      createTextHeader(),
+                      createToggle(),
+                      createSlider(),
+                      createChart(),
+                      createOptimalSplitDisplay(),
+                    ],
+                  ),
+                ))));
   }
 }

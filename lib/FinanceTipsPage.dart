@@ -8,10 +8,12 @@ class FinanceTipsPage extends StatefulWidget {
   _FinanceTipsPageState createState() => _FinanceTipsPageState();
 }
 
-class _FinanceTipsPageState extends State<FinanceTipsPage> {
+class _FinanceTipsPageState extends State<FinanceTipsPage> with AutomaticKeepAliveClientMixin {
 
   DatabaseReference tips = FirebaseDatabase.instance.reference().child("tips");
-  List<String> loadedTips = ["Try to use more cash!"];
+  List<String> loadedTips = ["84% dos consumidores já fizeram compras por impulso"];
+
+  bool wantKeepAlive = true;
 
   void initState() {
     tips.onChildAdded.listen(_addTips);
