@@ -192,7 +192,7 @@ class _DataPageState extends State<DataPage> {
 
     _seriesData = [];
 
-    List<double> line = InstallmentCalculator.gen30Line(_income);
+    List<double> line = InstallmentCalculator.gen30Line(_income, _accBalance);
     for (int i = 0; i < _moInstallments.length; i++) {
       double nValue = 0;
       if (i < _nInstallments.round()) {

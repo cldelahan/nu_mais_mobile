@@ -4,7 +4,7 @@ import 'package:normal/normal.dart';
 class InstallmentCalculator {
 
   static int getOptimalNumberOfSplits(List<double> installments, double price, double income, double cash, double savingsGoal) {
-    int smallestInstallment = getSmallestRecommendedInstallments(installments, price, income, savingsGoal);
+    int smallestInstallment = getSmallestRecommendedInstallments(installments, price, income, savingsGoal, cash);
     print("Smallest installment: " + smallestInstallment.toString());
 
     double minProbBankrupcy = 1;
@@ -30,7 +30,7 @@ class InstallmentCalculator {
   }
 
   static double getProbOfBankrupcy(double cash, double price, int nInstallments) {
-    double variance = 0.15 * cash;
+    double variance = 0.10 * cash;
     double std = (cash - price / nInstallments) / (nInstallments * variance);
     double pBankrupcy = 2 * (1 - Normal.cdf(std));
 
@@ -39,11 +39,11 @@ class InstallmentCalculator {
   }
 
   static int getSmallestRecommendedInstallments(
-      List<double> installments, double price, double income, double savingsGoal) {
+      List<double> installments, double price, double income, double savingsGoal, double cash) {
 
     for (int i = 1; i < 13; i++) {
       List<double> postInstallments = getInstallmentsAfterSplittingNTimes(installments, price, i);
-      if (areUnder30Line(income, postInstallments) && postInstallments[0] < income - savingsGoal) {
+      if (areUnder30Line(income, postInstallments, cash) && postInstallments[0] < income - savingsGoal) {
         return i;
       }
     }
@@ -52,8 +52,8 @@ class InstallmentCalculator {
   }
 
 
-  static bool areUnder30Line(double income, List<double> installments) {
-    List<double> line = gen30Line(income);
+  static bool areUnder30Line(double income, List<double> installments, double cash) {
+    List<double> line = gen30Line(income, cash);
     for (int i = 0; i < line.length; i ++) {
       if (installments[i] > line[i]) {
         return false;
@@ -63,10 +63,10 @@ class InstallmentCalculator {
 
   }
 
-  static List<double> gen30Line(double income) {
+  static List<double> gen30Line(double income, double cash) {
     List<double> line = [];
     double recom = 0.30 * income;
-    double c = recom * (1 / e);
+    double c = recom * min(2/3, cash / income);
     for (int i = 0; i < 12; i++) {
       double val = (recom/ (i + 1)) + c / (i + 1) * log(i + 1);
       line.add(val);
